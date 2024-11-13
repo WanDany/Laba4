@@ -8,7 +8,7 @@ pygame.init()
 # Настройки экрана
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption("Matrix Operations with Resizable UI")
+pygame.display.set_caption("Matrix Operations with Animations and Resizable UI")
 
 # Цвета
 WHITE = (255, 255, 255)
@@ -26,10 +26,20 @@ button_font = pygame.font.Font(None, 24)
 # Класс кнопки
 class Button:
     def __init__(self, x, y, width, height, text, action=None):
-        self.rect = pygame.Rect(x, y, width, height)
+        self.relative_pos = (x, y)
+        self.relative_size = (width, height)
         self.text = text
         self.action = action
         self.hovered = False
+        self.update_rect()
+
+    def update_rect(self):
+        self.rect = pygame.Rect(
+            int(self.relative_pos[0] * SCREEN_WIDTH),
+            int(self.relative_pos[1] * SCREEN_HEIGHT),
+            int(self.relative_size[0] * SCREEN_WIDTH),
+            int(self.relative_size[1] * SCREEN_HEIGHT)
+        )
 
     def draw(self):
         color = BUTTON_HOVER_COLOR if self.hovered else BUTTON_COLOR
@@ -45,13 +55,46 @@ class Button:
     def check_hover(self, pos):
         self.hovered = self.rect.collidepoint(pos)
 
+# Класс для полей ввода значений
+class InputBox:
+    def __init__(self, x, y, size):
+        self.relative_pos = (x, y)
+        self.relative_size = size
+        self.text = "0"
+        self.active = False
+        self.update_rect()
+
+    def update_rect(self):
+        box_size = int(self.relative_size * min(SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.rect = pygame.Rect(
+            int(self.relative_pos[0] * SCREEN_WIDTH),
+            int(self.relative_pos[1] * SCREEN_HEIGHT),
+            box_size, box_size
+        )
+
+    def draw(self):
+        pygame.draw.rect(screen, LIGHT_GRAY, self.rect)
+        pygame.draw.rect(screen, DARK_GRAY, self.rect, 2 if self.active else 1)
+        value_surface = font.render(self.text, True, BLACK)
+        screen.blit(value_surface, (self.rect.x + (self.rect.width - value_surface.get_width()) // 2,
+                                    self.rect.y + (self.rect.height - value_surface.get_height()) // 2))
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.active = self.rect.collidepoint(event.pos)
+        elif event.type == pygame.KEYDOWN and self.active:
+            if event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif event.unicode.isdigit() or (event.unicode == '-' and not self.text):
+                self.text += event.unicode
+
 # Класс для работы с матрицами
 class MatrixOperations:
     def __init__(self):
         self.matrix_a = np.zeros((2, 2), dtype=int)
         self.matrix_b = np.zeros((2, 2), dtype=int)
         self.result_matrix = None
-        self.operation = None
+        self.animation_step = 0
 
     def set_matrix_values(self, values_a, values_b):
         self.matrix_a = np.array(values_a).reshape((2, 2))
@@ -71,33 +114,19 @@ class MatrixOperations:
                 self.result_matrix = np.linalg.inv(self.matrix_a)
             except np.linalg.LinAlgError:
                 self.result_matrix = "Non-invertible matrix"
+        self.animation_step = 0
+
+    def animate_result(self):
+        if isinstance(self.result_matrix, np.ndarray):
+            self.animation_step += 1
+            if self.animation_step >= self.result_matrix.size:
+                self.animation_step = self.result_matrix.size
+            return self.animation_step < self.result_matrix.size
+        return False
 
     def clear_result(self):
         self.result_matrix = None
-
-# Отображение матрицы на экране
-def draw_matrix(matrix, position, title, input_boxes=None, input_values=None):
-    x, y = position
-    title_text = font.render(title, True, DARK_GRAY)
-    screen.blit(title_text, (x, y - 30))
-
-    if isinstance(matrix, str):
-        error_text = font.render(matrix, True, BLUE)
-        screen.blit(error_text, (x, y))
-    else:
-        for row in range(matrix.shape[0]):
-            for col in range(matrix.shape[1]):
-                rect = pygame.Rect(x + col * 60, y + row * 60, 50, 50)
-                pygame.draw.rect(screen, LIGHT_GRAY, rect)
-                pygame.draw.rect(screen, DARK_GRAY, rect, 2)
-                
-                value_text = input_values[row * 2 + col] if input_values else str(matrix[row, col])
-                color = BLACK if matrix[row, col] != 0 else DARK_GRAY
-                value_surface = font.render(value_text, True, color)
-                screen.blit(value_surface, (rect.x + (rect.width - value_surface.get_width()) // 2,
-                                            rect.y + (rect.height - value_surface.get_height()) // 2))
-                if input_boxes:
-                    input_boxes[row * 2 + col].update(rect)
+        self.animation_step = 0
 
 # Функции для кнопок
 def set_addition():
@@ -121,75 +150,80 @@ def clear_result():
 # Основные переменные и объекты
 matrix_operations = MatrixOperations()
 buttons = [
-    Button(50, 400, 150, 40, "Сложение", set_addition),
-    Button(220, 400, 150, 40, "Вычитание", set_subtraction),
-    Button(390, 400, 150, 40, "Умножение", set_multiplication),
-    Button(50, 460, 150, 40, "Транспонирование A", set_transpose),
-    Button(220, 460, 150, 40, "Обратная A", set_inverse),
-    Button(390, 460, 150, 40, "Очистить результат", clear_result)
+    Button(0.06, 0.83, 0.18, 0.06, "Сложение", set_addition),
+    Button(0.28, 0.83, 0.18, 0.06, "Вычитание", set_subtraction),
+    Button(0.50, 0.83, 0.18, 0.06, "Умножение", set_multiplication),
+    Button(0.06, 0.92, 0.18, 0.06, "Транспонирование A", set_transpose),
+    Button(0.28, 0.92, 0.18, 0.06, "Обратная A", set_inverse),
+    Button(0.50, 0.92, 0.18, 0.06, "Очистить результат", clear_result)
 ]
 
 # Поля ввода значений матриц
-input_boxes_a = [pygame.Rect(50 + (i % 2) * 60, 100 + (i // 2) * 60, 50, 50) for i in range(4)]
-input_boxes_b = [pygame.Rect(300 + (i % 2) * 60, 100 + (i // 2) * 60, 50, 50) for i in range(4)]
-input_values_a = ["0"] * 4
-input_values_b = ["0"] * 4
-active_box = None
+input_boxes_a = [InputBox(0.06 + (i % 2) * 0.1, 0.15 + (i // 2) * 0.1, 0.08) for i in range(4)]
+input_boxes_b = [InputBox(0.38 + (i % 2) * 0.1, 0.15 + (i // 2) * 0.1, 0.08) for i in range(4)]
 
 # Основной цикл программы
 running = True
 while running:
     screen.fill(WHITE)
 
-    # Отрисовка матриц и кнопок
-    draw_matrix(matrix_operations.matrix_a, (50, 100), "Matrix A", input_boxes_a, input_values_a)
-    draw_matrix(matrix_operations.matrix_b, (300, 100), "Matrix B", input_boxes_b, input_values_b)
-    if matrix_operations.result_matrix is not None:
-        draw_matrix(matrix_operations.result_matrix, (550, 100), "Result")
-
-    # Отображение кнопок
-    mouse_pos = pygame.mouse.get_pos()
+    # Перерисовываем кнопки и обновляем их позиции
     for button in buttons:
-        button.check_hover(mouse_pos)
+        button.update_rect()
         button.draw()
+
+    # Отображение полей ввода
+    for box in input_boxes_a + input_boxes_b:
+        box.update_rect()
+        box.draw()
+
+    # Отрисовка результата
+    if matrix_operations.result_matrix is not None:
+        if matrix_operations.animate_result():
+            for i, row in enumerate(matrix_operations.result_matrix):
+                for j, val in enumerate(row):
+                    if i * 2 + j < matrix_operations.animation_step:
+                        pos_x = int((0.7 + j * 0.1) * SCREEN_WIDTH)
+                        pos_y = int((0.15 + i * 0.1) * SCREEN_HEIGHT)
+                        rect = pygame.Rect(pos_x, pos_y, int(0.08 * SCREEN_WIDTH), int(0.08 * SCREEN_HEIGHT))
+                        pygame.draw.rect(screen, LIGHT_GRAY, rect)
+                        pygame.draw.rect(screen, DARK_GRAY, rect, 2)
+                        val_surface = font.render(str(val), True, BLACK)
+                        screen.blit(val_surface, (rect.x + (rect.width - val_surface.get_width()) // 2,
+                                                  rect.y + (rect.height - val_surface.get_height()) // 2))
+        else:
+            for i, row in enumerate(matrix_operations.result_matrix):
+                for j, val in enumerate(row):
+                    pos_x = int((0.7 + j * 0.1) * SCREEN_WIDTH)
+                    pos_y = int((0.15 + i * 0.1) * SCREEN_HEIGHT)
+                    rect = pygame.Rect(pos_x, pos_y, int(0.08 * SCREEN_WIDTH), int(0.08 * SCREEN_HEIGHT))
+                    pygame.draw.rect(screen, LIGHT_GRAY, rect)
+                    pygame.draw.rect(screen, DARK_GRAY, rect, 2)
+                    val_surface = font.render(str(val), True, BLACK)
+                    screen.blit(val_surface, (rect.x + (rect.width - val_surface.get_width()) // 2,
+                                              rect.y + (rect.height - val_surface.get_height()) // 2))
 
     # Обработка событий
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.VIDEORESIZE:
-            screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+            SCREEN_WIDTH, SCREEN_HEIGHT = event.w, event.h
+            screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             pos = event.pos
             for button in buttons:
                 button.check_click(pos)
-            for i, box in enumerate(input_boxes_a + input_boxes_b):
-                if box.collidepoint(pos):
-                    active_box = box
-                    if i < 4:
-                        input_values_a[i] = ""
-                    else:
-                        input_values_b[i - 4] = ""
-                    break
-            else:
-                active_box = None
-        elif event.type == pygame.KEYDOWN and active_box is not None:
-            index = (input_boxes_a + input_boxes_b).index(active_box)
-            if event.key == pygame.K_BACKSPACE:
-                if index < 4:
-                    input_values_a[index] = input_values_a[index][:-1]
-                else:
-                    input_values_b[index - 4] = input_values_b[index - 4][:-1]
-            elif event.unicode.isdigit() or (event.unicode == '-' and len(input_values_a[index]) == 0):
-                if index < 4:
-                    input_values_a[index] += event.unicode
-                else:
-                    input_values_b[index - 4] += event.unicode
+            for box in input_boxes_a + input_boxes_b:
+                box.handle_event(event)
+        elif event.type == pygame.KEYDOWN:
+            for box in input_boxes_a + input_boxes_b:
+                box.handle_event(event)
 
-            # Преобразуем значения в массивы для матриц
-            values_a = [int(val) if val else 0 for val in input_values_a]
-            values_b = [int(val) if val else 0 for val in input_values_b]
-            matrix_operations.set_matrix_values(values_a, values_b)
+    # Преобразование значений для матриц
+    values_a = [int(box.text) if box.text else 0 for box in input_boxes_a]
+    values_b = [int(box.text) if box.text else 0 for box in input_boxes_b]
+    matrix_operations.set_matrix_values(values_a, values_b)
 
     pygame.display.flip()
 
