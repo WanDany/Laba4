@@ -1,4 +1,5 @@
 import re
+import os
 from collections import Counter
 from tkinter import Tk, filedialog
 
@@ -30,7 +31,7 @@ def analyze_text(file_path):
     shortest_sentence = min(sentences, key=len)
     longest_sentence = max(sentences, key=len)
 
-    # Вывод результатов
+    # Вывод результатов на экран
     print("Слова, которые встречаются более одного раза:")
     for word, count in sorted_repeated_words:
         print(f"{word}: {count}")
@@ -44,6 +45,33 @@ def analyze_text(file_path):
 
     print(f"\nСамое короткое предложение: {shortest_sentence}")
     print(f"Самое длинное предложение: {longest_sentence}")
+
+    # Запись результатов в файл
+    write_results_to_file(sorted_repeated_words, sorted_unique_words, shortest_word, longest_word, shortest_sentence, longest_sentence)
+
+# Функция для записи результатов в новый текстовый файл
+def write_results_to_file(repeated_words, unique_words, shortest_word, longest_word, shortest_sentence, longest_sentence):
+    # Получение пути к текущей директории
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_directory, "text_analysis_results.txt")
+
+    # Открытие нового файла для записи
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write("Слова, которые встречаются более одного раза:\n")
+        for word, count in repeated_words:
+            file.write(f"{word}: {count}\n")
+
+        file.write("\nСлова, которые встречаются только один раз:\n")
+        for word in unique_words:
+            file.write(f"{word}\n")
+
+        file.write(f"\nСамое короткое слово: {shortest_word}\n")
+        file.write(f"Самое длинное слово: {longest_word}\n")
+
+        file.write(f"\nСамое короткое предложение: {shortest_sentence}\n")
+        file.write(f"Самое длинное предложение: {longest_sentence}\n")
+
+    print(f"\nРезультаты анализа сохранены в файл '{file_path}'.")
 
 # Функция для выбора файла
 def select_file():
