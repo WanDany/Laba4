@@ -1,5 +1,6 @@
 import re
 from collections import Counter
+from tkinter import Tk, filedialog
 
 def analyze_text(file_path):
     # Чтение текста из файла
@@ -44,6 +45,18 @@ def analyze_text(file_path):
     print(f"\nСамое короткое предложение: {shortest_sentence}")
     print(f"Самое длинное предложение: {longest_sentence}")
 
-# Пример использования функции:
-file_path = 'example.txt'  # Укажите путь к вашему файлу
-analyze_text(file_path)
+# Функция для выбора файла
+def select_file():
+    # Открытие диалогового окна для выбора файла
+    Tk().withdraw()  # Скрыть основное окно Tkinter
+    file_path = filedialog.askopenfilename(
+        title="Выберите текстовый файл",
+        filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+    )
+    if file_path:
+        analyze_text(file_path)
+    else:
+        print("Файл не выбран.")
+
+# Запуск программы
+select_file()
