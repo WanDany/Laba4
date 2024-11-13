@@ -1,3 +1,5 @@
+from datetime import datetime
+
 def get_file_content(filename):
     """Read content from a specified file."""
     try:
@@ -7,9 +9,15 @@ def get_file_content(filename):
         print(f"File '{filename}' not found.")
         return None
 
-def format_content(content, lines_per_page, left_margin):
-    """Format content with specified lines per page and left margin."""
-    formatted_content = ""
+def get_current_datetime():
+    """Get the current date and time as a formatted string."""
+    now = datetime.now()
+    return now.strftime("%Y-%m-%d %H:%M:%S")
+
+def format_content(content, lines_per_page, left_margin, filename):
+    """Format content with specified lines per page, left margin, and header info."""
+    header = f"File: {filename} | Date: {get_current_datetime()}\n" + "-" * 50 + "\n"
+    formatted_content = header
     page_line_count = 0
 
     for line in content:
@@ -45,7 +53,7 @@ def main():
         print("Invalid input. Please enter numeric values.")
         return
 
-    formatted_content = format_content(content, lines_per_page, left_margin)
+    formatted_content = format_content(content, lines_per_page, left_margin, filename)
 
     print("Choose output option:")
     print("1. Print to screen")
