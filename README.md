@@ -1,0 +1,1 @@
+Etot repozitoriy polnaya shlyapa
