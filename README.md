@@ -1,1 +1,5 @@
-Etot repozitoriy polnaya shlyapa
+Лабораторная работа №4. 
+Выполнили:
+Алтайбаев - lab4,
+Жакан - LW44,
+Зебрев - textanalyzer.
